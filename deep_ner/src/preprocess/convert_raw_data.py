@@ -178,6 +178,6 @@ def build_ent2query(data_dir):
 
 
 if __name__ == '__main__':
-    convert_data_to_json('../../data/raw_data', save_data=True, save_dict=True)
-    build_ent2query('../../data/mid_data')
+    convert_data_to_json('../../data/compete_data/raw_data', save_data=True, save_dict=True)
+    build_ent2query('../../data/compete_data/mid_data')
 

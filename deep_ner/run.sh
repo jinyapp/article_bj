@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 
-export MID_DATA_DIR="./data/mid_data"
-export RAW_DATA_DIR="./data/raw_data"
+export MID_DATA_DIR="./data/med_data/mid_data"
+export RAW_DATA_DIR="./data/med_data/raw_data"
 export OUTPUT_DIR="./out"
 
-export GPU_IDS="0"
-export BERT_TYPE="roberta_wwm"  # roberta_wwm / roberta_wwm_large / uer_large
-export BERT_DIR="../bert/torch_$BERT_TYPE"
+export GPU_IDS="6"
+export BERT_TYPE="bert-base"  # roberta_wwm / roberta_wwm_large / uer_large
+export BERT_DIR="/home/lijinyu/pretrained_models/bert_base/bert-base-chinese"
 
 export MODE="train"
 export TASK_TYPE="crf"

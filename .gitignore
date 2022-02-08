@@ -3,3 +3,4 @@ bert_ner_dev/med_data
 .idea/*
 bert_ner_dev/out_base
 deep_ner/data
+deep_ner/out

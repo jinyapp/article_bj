@@ -9,10 +9,10 @@ class Args:
     @staticmethod
     def initialize(parser: argparse.ArgumentParser):
         # args for path
-        parser.add_argument('--raw_data_dir', default='./data/raw_data',
+        parser.add_argument('--raw_data_dir', default='./data/med_data/raw_data',
                             help='the data dir of raw data')
 
-        parser.add_argument('--mid_data_dir', default='./data/mid_data',
+        parser.add_argument('--mid_data_dir', default='./data/med_data/mid_data',
                             help='the mid data dir')
 
         parser.add_argument('--output_dir', default='./out/',

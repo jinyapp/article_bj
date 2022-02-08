@@ -2,7 +2,8 @@ import torch
 import logging
 import numpy as np
 from collections import defaultdict
-from src.preprocess.processor import ENTITY_TYPES
+
+from deep_ner.src.preprocess.processor import ENTITY_TYPES
 
 logger = logging.getLogger(__name__)
 

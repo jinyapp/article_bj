@@ -8,7 +8,7 @@ from src.utils.evaluator import crf_decode, span_decode
 from src.utils.functions_utils import load_model_and_parallel, ensemble_vote
 from src.preprocess.processor import cut_sent, fine_grade_tokenize
 
-MID_DATA_DIR = "./data/mid_data"
+MID_DATA_DIR = "data/med_data/mid_data"
 RAW_DATA_DIR = "./data/raw_data_random"
 SUBMIT_DIR = "./result"
 GPU_IDS = "0"

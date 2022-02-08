@@ -11,22 +11,25 @@ from src.utils.dataset_utils import NERDataset
 from src.utils.evaluator import crf_evaluation, span_evaluation, mrc_evaluation
 from src.utils.functions_utils import set_seed, get_model_path_list, load_model_and_parallel, get_time_dif
 from src.preprocess.processor import NERProcessor, convert_examples_to_features
+import sys, platform
 
+print(sys.platform)
+print()
 logger = logging.getLogger(__name__)
 logging.basicConfig(
     format="%(asctime)s - %(levelname)s - %(name)s -   %(message)s",
     datefmt="%m/%d/%Y %H:%M:%S",
     level=logging.INFO
 )
-
+DIR_SPLIT = '\\' if platform.system()=='Windows' else '/'
 def train_base(opt, train_examples, dev_examples=None):
     with open(os.path.join(opt.mid_data_dir, f'{opt.task_type}_ent2id.json'), encoding='utf-8') as f:
         ent2id = json.load(f)
 
-    train_features = convert_examples_to_features(opt.task_type, train_examples,
-                                                  opt.max_seq_len, opt.bert_dir, ent2id)[0]
-
-    train_dataset = NERDataset(opt.task_type, train_features, 'train', use_type_embed=opt.use_type_embed)
+    # train_features = convert_examples_to_features(opt.task_type, train_examples,
+    #                                               opt.max_seq_len, opt.bert_dir, ent2id)[0]
+    #
+    # train_dataset = NERDataset(opt.task_type, train_features, 'train', use_type_embed=opt.use_type_embed)
 
     if opt.task_type == 'crf':
         model = build_model('crf', opt.bert_dir, num_tags=len(ent2id),
@@ -41,7 +44,7 @@ def train_base(opt, train_examples, dev_examples=None):
                             dropout_prob=opt.dropout_prob,
                             loss_type=opt.loss_type)
 
-    train(opt, model, train_dataset)
+    # train(opt, model, train_dataset)
 
     if dev_examples is not None:
 
@@ -66,7 +69,7 @@ def train_base(opt, train_examples, dev_examples=None):
 
         for idx, model_path in enumerate(model_path_list):
 
-            tmp_step = model_path.split('/')[-2].split('-')[-1]
+            tmp_step = model_path.split(DIR_SPLIT)[-2].split('-')[-1]
 
 
             model, device = load_model_and_parallel(model, opt.gpu_ids[0],
@@ -175,26 +178,26 @@ if __name__ == '__main__':
 
     args = Args().get_parser()
     # start
-    MID_DATA_DIR = "./data/mid_data"
-    RAW_DATA_DIR = "./data/raw_data"
-    OUTPUT_DIR = "./out"
-
-    GPU_IDS = "0"
-    BERT_TYPE = "bert-base"  # roberta_wwm / roberta_wwm_large / uer_large
-    BERT_DIR = "F:\\pretrained_models\\bert_base\\bert-base-chinese"
-
-    MODE = "train"
-    TASK_TYPE = "crf"
-    args.bert_type=BERT_TYPE
-    args.bert_dir=BERT_DIR
-    args.output_dir=OUTPUT_DIR
-    args.mid_data_dir=MID_DATA_DIR
-    args.mode=MODE
-    args.task_type=TASK_TYPE
-    args.raw_data_dir=RAW_DATA_DIR
-    args.max_seq_len=128
-    args.eval_model=True
-    args.train_epochs=2
+    # MID_DATA_DIR = "data/med_data/mid_data"
+    # RAW_DATA_DIR = "data/med_data/raw_data"
+    # OUTPUT_DIR = "./out"
+    #
+    # GPU_IDS = "0"
+    # BERT_TYPE = "bert-base"  # roberta_wwm / roberta_wwm_large / uer_large
+    # BERT_DIR = "F:\\pretrained_models\\bert_base\\bert-base-chinese"
+    #
+    # MODE = "train"
+    # TASK_TYPE = "crf"
+    # args.bert_type=BERT_TYPE
+    # args.bert_dir=BERT_DIR
+    # args.output_dir=OUTPUT_DIR
+    # args.mid_data_dir=MID_DATA_DIR
+    # args.mode=MODE
+    # args.task_type=TASK_TYPE
+    # args.raw_data_dir=RAW_DATA_DIR
+    # args.max_seq_len=128
+    # args.eval_model=True
+    # args.train_epochs=2
     #end
 
     assert args.mode in ['train', 'stack'], 'mode mismatch'

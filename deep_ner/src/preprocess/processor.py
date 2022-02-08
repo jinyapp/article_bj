@@ -8,11 +8,29 @@ import random
 
 logger = logging.getLogger(__name__)
 
-ENTITY_TYPES = ['DRUG', 'DRUG_INGREDIENT', 'DISEASE', 'SYMPTOM', 'SYNDROME', 'DISEASE_GROUP',
+COMPETE_ENTITY_TYPES = ['DRUG', 'DRUG_INGREDIENT', 'DISEASE', 'SYMPTOM', 'SYNDROME', 'DISEASE_GROUP',
                 'FOOD', 'FOOD_GROUP', 'PERSON_GROUP', 'DRUG_GROUP', 'DRUG_DOSAGE', 'DRUG_TASTE',
                 'DRUG_EFFICACY']
-
-
+MED_ENTITY_TYPES = [
+        "MedCheck",
+        "Drug",
+        "Degree",
+        "Nature",
+        "Symptom",
+        "Disease",
+        "Position",
+        "BodyParts",
+        "Negative",
+        "CheckKey",
+        "CheckVal",
+        "People",
+        "DiseaseHistoryTrigger",
+        "Time",
+        "Frequency",
+        "BodyFunction",
+        "BodyFunctionSym",
+    ]
+ENTITY_TYPES = MED_ENTITY_TYPES
 class InputExample:
     def __init__(self,
                  set_type,
@@ -282,7 +300,8 @@ def convert_crf_example(ex_idx, example: InputExample, tokenizer: BertTokenizer,
     callback_info = (raw_text,)
     callback_labels = {x: [] for x in ENTITY_TYPES}
 
-    for _label in entities:
+    for idx,_label in enumerate(entities):
+        # print(idx)
         callback_labels[_label[0]].append((_label[1], _label[2]))
 
     callback_info += (callback_labels,)
@@ -580,7 +599,8 @@ def convert_examples_to_features(task_type, examples, max_seq_len, bert_dir, ent
     callback_info = []
 
     logger.info(f'Convert {len(examples)} examples to features')
-    type2id = {x: i for i, x in enumerate(ENTITY_TYPES)}
+    # type2id = {x: i for i, x in enumerate(ENTITY_TYPES)}
+    type2id = {x: i for i, x in enumerate(MED_ENTITY_TYPES)}
 
     for i, example in enumerate(examples):
         if task_type == 'crf':
