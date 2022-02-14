@@ -5,8 +5,8 @@ import torch.nn as nn
 from torchcrf import CRF
 from itertools import repeat
 from transformers import BertModel
-from src.utils.functions_utils import vote
-from src.utils.evaluator import crf_decode, span_decode
+from deep_ner.src.utils.functions_utils import vote
+from deep_ner.src.utils.evaluator import crf_decode, span_decode
 
 
 class LabelSmoothingCrossEntropy(nn.Module):
@@ -179,14 +179,15 @@ class CRFModel(BaseModel):
 
         self.classifier = nn.Linear(out_dims, num_tags)
 
-        self.loss_weight = nn.Parameter(torch.FloatTensor(1), requires_grad=True)
+        #将一个不可训练的类型Tensor转换成可以训练的类型parameter并将这个parameter绑定到这个module里面(net.parameter()中就有这个绑定的parameter，所以在参数优化的时候可以进行优化的)
+        self.loss_weight = nn.Parameter(torch.FloatTensor(1), requires_grad=True)# torch.FloatTensor(1), requires_grad=True 只是将参数变成可训练的，并没有绑定在module的parameter列表中。
         self.loss_weight.data.fill_(-0.2)
 
         self.crf_module = CRF(num_tags=num_tags, batch_first=True)
 
         init_blocks = [self.mid_linear, self.classifier]
 
-        self._init_weights(init_blocks, initializer_range=self.bert_config.initializer_range)
+        self._init_weicrfghts(init_blocks, initializer_range=self.bert_config.initializer_range)
 
     def forward(self,
                 token_ids,
@@ -221,7 +222,7 @@ class CRFModel(BaseModel):
                 total_nums = token_ids.shape[0]
 
                 # learning parameter
-                rate = torch.sigmoid(self.loss_weight)
+                rate = torch.sigmoid(self.loss_weight)#将值映射到0-1之间
                 if pseudo_nums == 0:
                     loss_0 = tokens_loss.mean()
                     loss_1 = (rate*pseudo*tokens_loss).sum()

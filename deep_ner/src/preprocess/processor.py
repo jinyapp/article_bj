@@ -658,7 +658,7 @@ def convert_examples_to_features(task_type, examples, max_seq_len, bert_dir, ent
             count += len(_callback[-1])
     else:
         for _callback in callback_info:
-            for _type in _callback[1]:
+            for _type in _callback[1]:  #??????????
                 type_weight[_type] += len(_callback[1][_type])
                 count += len(_callback[1][_type])
 

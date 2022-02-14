@@ -26,10 +26,10 @@ def train_base(opt, train_examples, dev_examples=None):
     with open(os.path.join(opt.mid_data_dir, f'{opt.task_type}_ent2id.json'), encoding='utf-8') as f:
         ent2id = json.load(f)
 
-    # train_features = convert_examples_to_features(opt.task_type, train_examples,
-    #                                               opt.max_seq_len, opt.bert_dir, ent2id)[0]
-    #
-    # train_dataset = NERDataset(opt.task_type, train_features, 'train', use_type_embed=opt.use_type_embed)
+    train_features = convert_examples_to_features(opt.task_type, train_examples,
+                                                  opt.max_seq_len, opt.bert_dir, ent2id)[0]
+    #labels 一个不可训练的类型Tensor转换成可以训练的类型parameter并将这个parameter绑定到这个module里面(net.parameter()中就有这个绑定的parameter，所以在参数优化的时候可以进行优化的)
+    train_dataset = NERDataset(opt.task_type, train_features, 'train', use_type_embed=opt.use_type_embed)
 
     if opt.task_type == 'crf':
         model = build_model('crf', opt.bert_dir, num_tags=len(ent2id),
@@ -44,7 +44,7 @@ def train_base(opt, train_examples, dev_examples=None):
                             dropout_prob=opt.dropout_prob,
                             loss_type=opt.loss_type)
 
-    # train(opt, model, train_dataset)
+    train(opt, model, train_dataset)
 
     if dev_examples is not None:
 
@@ -177,28 +177,6 @@ if __name__ == '__main__':
     logging.info('----------------------------------------')
 
     args = Args().get_parser()
-    # start
-    # MID_DATA_DIR = "data/med_data/mid_data"
-    # RAW_DATA_DIR = "data/med_data/raw_data"
-    # OUTPUT_DIR = "./out"
-    #
-    # GPU_IDS = "0"
-    # BERT_TYPE = "bert-base"  # roberta_wwm / roberta_wwm_large / uer_large
-    # BERT_DIR = "F:\\pretrained_models\\bert_base\\bert-base-chinese"
-    #
-    # MODE = "train"
-    # TASK_TYPE = "crf"
-    # args.bert_type=BERT_TYPE
-    # args.bert_dir=BERT_DIR
-    # args.output_dir=OUTPUT_DIR
-    # args.mid_data_dir=MID_DATA_DIR
-    # args.mode=MODE
-    # args.task_type=TASK_TYPE
-    # args.raw_data_dir=RAW_DATA_DIR
-    # args.max_seq_len=128
-    # args.eval_model=True
-    # args.train_epochs=2
-    #end
 
     assert args.mode in ['train', 'stack'], 'mode mismatch'
     assert args.task_type in ['crf', 'span', 'mrc']
