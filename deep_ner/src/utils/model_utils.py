@@ -512,8 +512,13 @@ class CRF_MATRIX_Model(BaseModel):
 
         mid_linear_dims = kwargs.pop('mid_linear_dims', 128)
 
-        self.mid_linear = nn.Sequential(
-            nn.Linear(out_dims, mid_linear_dims),
+        self.first_linear = nn.Sequential(
+            nn.Linear(out_dims*2, 512),
+            nn.ReLU(),
+            nn.Dropout(dropout_prob)
+        )
+        self.second_linear = nn.Sequential(
+            nn.Linear(512, num_tags),
             nn.ReLU(),
             nn.Dropout(dropout_prob)
         )
@@ -554,7 +559,7 @@ class CRF_MATRIX_Model(BaseModel):
         h_j_matrix = h_i_matrix.transpose(1,2)
         #最后一个维度拼接
         span_matrix = torch.cat([h_i_matrix, h_j_matrix], dim=-1)
-        ner_logits = self.dense2(torch.relu(self.dense1(span_matrix)))
+        ner_logits = self.second_linear(self.first_linear(span_matrix))
         scores = torch.softmax(ner_logits, dim=-1)
         logits = torch.argmax(scores, axis=-1)
 
@@ -564,43 +569,30 @@ class CRF_MATRIX_Model(BaseModel):
         emissions = self.classifier(seq_out)
 
         if labels is not None:
-            if pseudo is not None:
-                # (batch,)
-                tokens_loss = -1. * self.crf_module(emissions=emissions,
-                                                    tags=labels.long(),
-                                                    mask=attention_masks.byte(),
-                                                    reduction='none')
+            start_logits = start_logits.view(-1, self.num_tags)
+            end_logits = end_logits.view(-1, self.num_tags)
 
-                # nums of pseudo data
-                pseudo_nums = pseudo.sum().item()
-                total_nums = token_ids.shape[0]
+            # 去掉 padding 部分的标签，计算真实 loss
+            active_loss = attention_masks.view(-1) == 1
+            active_start_logits = start_logits[active_loss]
+            active_end_logits = end_logits[active_loss]
 
-                # learning parameter
-                rate = torch.sigmoid(self.loss_weight)#将值映射到0-1之间
-                if pseudo_nums == 0:
-                    loss_0 = tokens_loss.mean()
-                    loss_1 = (rate*pseudo*tokens_loss).sum()
-                else:
-                    if total_nums == pseudo_nums:
-                        loss_0 = 0
-                    else:
-                        loss_0 = ((1 - rate) * (1 - pseudo) * tokens_loss).sum() / (total_nums - pseudo_nums)
-                    loss_1 = (rate*pseudo*tokens_loss).sum() / pseudo_nums
+            active_start_labels = start_ids.view(-1)[active_loss]
+            active_end_labels = end_ids.view(-1)[active_loss]
+            start_logits = start_logits.view(-1, self.num_tags)
+            end_logits = end_logits.view(-1, self.num_tags)
 
-                tokens_loss = loss_0 + loss_1
+            # 去掉 padding 部分的标签，计算真实 loss
+            active_loss = attention_masks.view(-1) == 1
+            active_start_logits = start_logits[active_loss]
+            active_end_logits = end_logits[active_loss]
 
-            else:
-                tokens_loss = -1. * self.crf_module(emissions=emissions,
-                                                    tags=labels.long(),
-                                                    mask=attention_masks.byte(),
-                                                    reduction='mean')
-
+            active_start_labels = start_ids.view(-1)[active_loss]
+            active_end_labels = end_ids.view(-1)[active_loss]
             out = (tokens_loss,)
 
         else:
-            tokens_out = self.crf_module.decode(emissions=emissions, mask=attention_masks.byte())
-
-            out = (tokens_out, emissions)
+            return logits, scores
 
         return out
 
