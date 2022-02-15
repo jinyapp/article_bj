@@ -505,37 +505,44 @@ class CRF_MATRIX_Model(BaseModel):
                  bert_dir,
                  num_tags,
                  dropout_prob=0.1,
+                 loss_type='ce',
                  **kwargs):
         super(CRF_MATRIX_Model, self).__init__(bert_dir=bert_dir, dropout_prob=dropout_prob)
 
         out_dims = self.bert_config.hidden_size
 
         mid_linear_dims = kwargs.pop('mid_linear_dims', 128)
-
-        self.first_linear = nn.Sequential(
-            nn.Linear(out_dims*2, 512),
+        self.mid_linear = nn.Sequential(
+            nn.Linear(out_dims, mid_linear_dims),
             nn.ReLU(),
             nn.Dropout(dropout_prob)
         )
-        self.second_linear = nn.Sequential(
-            nn.Linear(512, num_tags),
-            nn.ReLU(),
-            nn.Dropout(dropout_prob)
-        )
+        self.first_linear = nn.Linear(out_dims*2, mid_linear_dims)
+        self.second_linear = nn.Linear(mid_linear_dims, num_tags)
+        # self.first_linear = nn.Sequential(
+        #     nn.Linear(out_dims*2, mid_linear_dims),
+        #     nn.ReLU(),
+        #     nn.Dropout(dropout_prob)
+        # )
+        # self.second_linear = nn.Sequential(
+        #     nn.Linear(mid_linear_dims, num_tags),
+        #     nn.ReLU(),
+        #     nn.Dropout(dropout_prob)
+        # )
+        reduction = 'none'
+        if loss_type == 'ce':
+            self.criterion = nn.CrossEntropyLoss(reduction=reduction)
+        elif loss_type == 'ls_ce':
+            self.criterion = LabelSmoothingCrossEntropy(reduction=reduction)
+        else:
+            self.criterion = FocalLoss(reduction=reduction)
 
-        out_dims = mid_linear_dims
+        # self.loss_weight = nn.Parameter(torch.FloatTensor(1), requires_grad=True)
+        # self.loss_weight.data.fill_(-0.2)
 
-        self.classifier = nn.Linear(out_dims, num_tags)
+        init_blocks = [self.first_linear, self.second_linear, self.mid_linear]
 
-        #将一个不可训练的类型Tensor转换成可以训练的类型parameter并将这个parameter绑定到这个module里面(net.parameter()中就有这个绑定的parameter，所以在参数优化的时候可以进行优化的)
-        self.loss_weight = nn.Parameter(torch.FloatTensor(1), requires_grad=True)# torch.FloatTensor(1), requires_grad=True 只是将参数变成可训练的，并没有绑定在module的parameter列表中。
-        self.loss_weight.data.fill_(-0.2)
-
-        self.crf_module = CRF(num_tags=num_tags, batch_first=True)
-
-        init_blocks = [self.mid_linear, self.classifier]
-
-        self._init_weicrfghts(init_blocks, initializer_range=self.bert_config.initializer_range)
+        self._init_weights(init_blocks)
 
     def forward(self,
                 token_ids,
@@ -552,50 +559,49 @@ class CRF_MATRIX_Model(BaseModel):
 
         # 常规
         seq_out = bert_outputs[0]
-
         batch_size, max_len, feat_dim = seq_out.shape
+        seq_out = self.mid_linear(seq_out)
         h_i_matrix = seq_out.view(batch_size, max_len, 1, feat_dim).repeat(1,1,max_len,1)
         # transpose交换两个维度
         h_j_matrix = h_i_matrix.transpose(1,2)
         #最后一个维度拼接
         span_matrix = torch.cat([h_i_matrix, h_j_matrix], dim=-1)
-        ner_logits = self.second_linear(self.first_linear(span_matrix))
+        ner_logits = self.second_linear(torch.relu(self.first_linear(span_matrix)))
+        # ner_logits = self.second_linear(self.first_linear(span_matrix))
         scores = torch.softmax(ner_logits, dim=-1)
-        logits = torch.argmax(scores, axis=-1)
-
-
-        seq_out = self.mid_linear(seq_out)
-
-        emissions = self.classifier(seq_out)
+        logits = torch.argmax(scores, dim=-1)
 
         if labels is not None:
-            start_logits = start_logits.view(-1, self.num_tags)
-            end_logits = end_logits.view(-1, self.num_tags)
-
             # 去掉 padding 部分的标签，计算真实 loss
-            active_loss = attention_masks.view(-1) == 1
-            active_start_logits = start_logits[active_loss]
-            active_end_logits = end_logits[active_loss]
+            neg_sample_masks = self.randomNS_create_mask(labels, batch_size, max_len)
+            if neg_sample_masks == "error":
+                raise ValueError
+            active_loss = neg_sample_masks.view(-1) == 1
+            active_logits = ner_logits[active_loss]
 
-            active_start_labels = start_ids.view(-1)[active_loss]
-            active_end_labels = end_ids.view(-1)[active_loss]
-            start_logits = start_logits.view(-1, self.num_tags)
-            end_logits = end_logits.view(-1, self.num_tags)
-
-            # 去掉 padding 部分的标签，计算真实 loss
-            active_loss = attention_masks.view(-1) == 1
-            active_start_logits = start_logits[active_loss]
-            active_end_logits = end_logits[active_loss]
-
-            active_start_labels = start_ids.view(-1)[active_loss]
-            active_end_labels = end_ids.view(-1)[active_loss]
-            out = (tokens_loss,)
-
+            active_labels = labels.view(-1)[active_loss]
+            loss = self.criterion(active_logits, active_labels)
+            out = (loss,)
         else:
             return logits, scores
 
         return out
-
+    def randomNS_create_mask(self, labels, batch_size, max_len):
+        expect_num = 20
+        random_p = 2*expect_num / ((2*max_len - self.span_len)*self.span_len)
+        keep_pos = (labels > 1).int()
+        # random_keep_pos = (torch.rand([batch_size, max_len, max_len])<random_p).int().cuda()
+        random_keep_pos = (torch.rand([batch_size, max_len, max_len])<random_p).int()
+        try:
+            merge_keep_pos = keep_pos|random_keep_pos
+        except:
+            print("keep_pos:", keep_pos.size())
+            print("random_keep_pos:", random_keep_pos.size())
+            return "error"
+        # torch.triu 返回矩阵上三角部分，其余部分定义为0 ;如果diagonal为正数n，输入矩阵保留主对角线与主对角线以上除去n行的元素；
+        # torch.triu(merge_keep_pos)表示所有可能的正样本，减去正样本
+        mask = torch.triu(merge_keep_pos)-torch.triu(merge_keep_pos, self.span_len)
+        return mask
 class EnsembleCRFModel:
     def __init__(self, model_path_list, bert_dir_list, num_tags, device, lamb=1/3):
 
