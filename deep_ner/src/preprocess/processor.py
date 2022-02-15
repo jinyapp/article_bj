@@ -299,7 +299,7 @@ def convert_crf_example(ex_idx, example: InputExample, tokenizer: BertTokenizer,
 
     callback_info = (raw_text,)
     callback_labels = {x: [] for x in ENTITY_TYPES}
-
+#callback_labels：'MedCheck': [('检查', 60)]
     for idx,_label in enumerate(entities):
         # print(idx)
         callback_labels[_label[0]].append((_label[1], _label[2]))

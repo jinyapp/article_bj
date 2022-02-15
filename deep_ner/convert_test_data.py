@@ -4,6 +4,22 @@ import json
 import numpy as np
 from tqdm import trange
 
+from deep_ner.src.preprocess.processor import ENTITY_TYPES
+
+
+def get_mrc_labels(data_dir):
+    label_list = {}
+    for index,label in enumerate(ENTITY_TYPES):
+        label_list[label] = ""
+    print(len(label_list))
+    save_info(data_dir,label_list, 'mrc_ent2id')
+
+def get_span_labels(data_dir):
+    label_list = {}
+    for index,label in enumerate(ENTITY_TYPES):
+        label_list[label] = index+1
+    print(len(label_list))
+    save_info(data_dir,label_list, 'span_ent2id')
 
 def get_crf_labels(data_dir):
     labels = ["O"]
@@ -104,5 +120,8 @@ if __name__ == '__main__':
     #end
 
     # start
-    get_crf_labels('./data/med_data/mid_data')
+    # get_crf_labels('./data/med_data/mid_data')
+    # get_span_labels('./data/med_data/mid_data')
+    get_mrc_labels('./data/med_data/mid_data')
+
 

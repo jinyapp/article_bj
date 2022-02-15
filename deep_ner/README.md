@@ -1,6 +1,15 @@
 conda env:deepner
 参考自：F:\NER\BERT-NER-Pytorch-master\BERT-NER-Pytorch-master
 
+https://github.com/z814081807/DeepNER
+
+│   ├── raw_data                            # 转换后的数据
+│   │   ├── dev.json                        # 转换后的验证集
+│   │   ├── test.json                       # 转换后的初赛测试集
+│   │   ├── pseudo.json                     # 转换后的半监督数据
+│   │   ├── stack.json                      # 转换后的全体数据
+│   └── └── train.json                      # 转换后的训练集
+
 
 
 python main.py \

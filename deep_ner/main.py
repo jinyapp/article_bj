@@ -26,10 +26,11 @@ def train_base(opt, train_examples, dev_examples=None):
     with open(os.path.join(opt.mid_data_dir, f'{opt.task_type}_ent2id.json'), encoding='utf-8') as f:
         ent2id = json.load(f)
 
-    # train_features = convert_examples_to_features(opt.task_type, train_examples,
-    #                                               opt.max_seq_len, opt.bert_dir, ent2id)[0]
-    #
-    # train_dataset = NERDataset(opt.task_type, train_features, 'train', use_type_embed=opt.use_type_embed)
+    # 转为bert输入等
+    train_features = convert_examples_to_features(opt.task_type, train_examples,
+                                                  opt.max_seq_len, opt.bert_dir, ent2id)[0]
+    # 转为Dataset（torch.tensor）
+    train_dataset = NERDataset(opt.task_type, train_features, 'train', use_type_embed=opt.use_type_embed)
 
     if opt.task_type == 'crf':
         model = build_model('crf', opt.bert_dir, num_tags=len(ent2id),
@@ -44,7 +45,7 @@ def train_base(opt, train_examples, dev_examples=None):
                             dropout_prob=opt.dropout_prob,
                             loss_type=opt.loss_type)
 
-    # train(opt, model, train_dataset)
+    train(opt, model, train_dataset)
 
     if dev_examples is not None:
 
@@ -201,7 +202,7 @@ if __name__ == '__main__':
     #end
 
     assert args.mode in ['train', 'stack'], 'mode mismatch'
-    assert args.task_type in ['crf', 'span', 'mrc']
+    assert args.task_type in ['crf', 'span', 'mrc','span_matrix']
 
     args.output_dir = os.path.join(args.output_dir, args.bert_type)
 

@@ -5,8 +5,8 @@ import logging
 from torch.cuda.amp import autocast as ac
 from torch.utils.data import DataLoader, RandomSampler
 from transformers import AdamW, get_linear_schedule_with_warmup
-from src.utils.attack_train_utils import FGM, PGD
-from src.utils.functions_utils import load_model_and_parallel, swa
+from deep_ner.src.utils.attack_train_utils import FGM, PGD
+from deep_ner.src.utils.functions_utils import load_model_and_parallel, swa
 
 
 logger = logging.getLogger(__name__)
